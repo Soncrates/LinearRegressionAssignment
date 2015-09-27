@@ -1,0 +1,304 @@
+---
+title: "Gas Mileage as a function of Transmission type"
+author: "Chris Emerson"
+date: "Wednesday, September 16, 2015"
+fontsize: 8pt
+output: pdf_document
+---
+
+```{r toolbox1A, echo=FALSE, eval=TRUE}
+
+normalize_mtcars <- function(ret,cols) {
+  for (val in cols) {
+    if (val == "mpg"){
+      next
+    }
+    t <- ret[[val]]
+#    t <- (t - mean(t))/sd(t)
+    t <- (t - mean(t))
+    ret[[val]] <- t
+  }
+  ret
+}
+```
+```{r toolbox1AA, echo=FALSE, eval=TRUE}
+enumerate_cols <- function (ret,cols) {
+  for (val in cols) {
+    t <- ret[[val]]
+    t <- as.factor(t)
+    ret[[val]] <- t
+  }
+  ret
+}
+```
+```{r toolbox1B, echo=FALSE, eval=TRUE}
+
+find_cor <- function(t,cols,description) {
+  ret <-round(cor(t[,cols]),2)[,"mpg"]
+  ret$description <-description
+  ret
+}
+
+explore_mpg_base <- function(t) {
+  ret <- lm(mpg ~ ., data=t)
+  ret <- summary(ret)
+  ret <- coef(ret)
+  ret <- ret[,3]
+  round(ret,2)
+}
+
+explore_mpg <- function(a,b,c) {
+    rbind(explore_mpg_base(a),
+          explore_mpg_base(b),
+          explore_mpg_base(c))  
+}
+
+explore2_mpg <- function(t) {
+  lm(mpg ~ factor(am), data = t)  
+}
+explore3_mpg <- function(t) {
+  lm(mpg ~ disp*factor(am), data = t)  
+}
+explore4_mpg <- function(t) {
+  lm(mpg ~ qsec*factor(am), data = t)  
+}
+```
+
+```{r toolbox2, echo=FALSE, eval=TRUE}
+
+plot_graph <- function(ret) {
+    require(ggplot2, quietly = TRUE)
+    require(dplyr, quietly = TRUE)
+    theme_set(theme_bw())
+    names_var <- names(select(ret, -mpg))
+    out <- NULL
+    g <- ggplot(ret, aes(y = mpg))
+    for(i in 1:length(names_var)){
+        if (names_var[i] %in% enumerated) {
+          next
+        }
+        g <- g + aes_string(x = names_var[i]) 
+        g <- g + geom_point(aes(colour = am),alpha = 5/40) 
+        g <- g + geom_smooth(method = "lm",aes(colour = am),alpha = 1/40)
+        print(g)
+        out[[i]] <- g
+    }
+    out <<- out
+}
+
+
+ppp <- function(temp, title, color) {
+  library(GGally, quietly = TRUE)
+  require(ggplot2, quietly = TRUE)
+  theme_set(theme_bw())
+  
+  c <- c(1,3,4,6,10);
+  c <- c(1,3,4,5,6,7);
+#  c <- c(1,4,5,6,7);
+#  c <- c(1,6,7,10,11);
+#  print(colnames(temp))
+  print(colnames(temp)[c])
+  g <- ggpairs(temp,
+               columns = c,
+#               size = "gear",
+               alpha = 1/40,
+#               upper = list(continuous = "cor", size = 2),
+#               upper = list(params = c(size = 3)),
+               upper = "blank",
+               lower = list(continuous = "smooth"),
+#               diag = "blank",
+               axisLabels = "show",
+               colour = color,
+               title = title,
+               legend = F
+               )
+  
+#   ggplot example taken from example(geom_text)
+#  gg <- ggplot(mtcars, aes(x=wt, y=mpg, label=rownames(mtcars),colour=factor(am)))
+#  gg <- gg + geom_text(aes(colour=factor(cyl)), size = 3)
+#  gg <- gg + scale_colour_discrete(l=40)
+#  g <- putPlot(g, gg, 1, 2)
+#  personal_plot <- ggally_text(
+#    "ggpairs allows you\nto put in your\nown plot.\nLike that one.\n <---"
+#  )
+#  g <- putPlot(g, personal_plot, 1, 3)  
+  print(g)
+}
+
+```
+
+##Executive Summary
+Looking at a data set of a collection of cars, let us explore the relationship between a set of variables and miles per gallon (MPG) (outcome). Particularly of interest is the following two questions:
+
+1. Is an automatic or manual transmission better for MPG?
+2. Quantify the MPG difference between automatic and manual transmissions.
+
+Please see my conclusion for full details but in brief, manual trasmissions are have significantly better mpg.  See Appendix A for details regarding the dataset.
+
+##Exploratory Data Analyses
+I normalized the data set on columns that I defined as continuous; I did so for the data as a whole as well as subset of automatic transmissions and subset of manual transmissions then combined the 3 results. See Appendix A and B for my definition of continuous.
+
+###Correlation
+
+Normalizing all the data has no affect on correlation calculation of total or by subset. Normalzing each subset, Manual and Automatic, does have an affect when corelating all the data but not the subset.
+```{r definition, size="6pt",tidy=TRUE, echo=FALSE}
+cols <- colnames(mtcars)
+enumerated <- c('cyl','gear','carb','vs','am')
+continuous <- cols[ !cols %in%  enumerated]
+
+```
+
+``` {r exploredata,echo=FALSE}
+n <- normalize_mtcars (mtcars,continuous)
+n0 <- normalize_mtcars (mtcars[mtcars$am==0,],continuous)
+n1 <- normalize_mtcars (mtcars[mtcars$am==1,],continuous)
+``` {r exploredata2,echo=FALSE}
+nn <- rbind(n0,n1)
+n0$am = 2
+n1$am = 3
+nnn <- rbind(n0,n1,n)
+```
+
+```{r message=FALSE, warning=FALSE, size=5, echo=FALSE}
+temp <- continuous
+c <- find_cor(n,temp,"All data normalized together")
+cc<- find_cor(nn,temp,"All data normalized by subset")
+nm <- find_cor(n[n$am==1,],temp,"Manual normalized")
+na <- find_cor(n[n$am==0,],temp,"Automatic normalized")
+t <- rbind(c,cc,nm,na)
+print(t)
+```
+```{r message=FALSE, warning=FALSE, size=5, echo=FALSE, eval=FALSE}
+#No corlation difference between normalized andunnormalized
+m <- find_cor(mtcars[mtcars$am==1,],temp,"Manual")
+a <- find_cor(mtcars[mtcars$am==0,],temp,"Automatic")
+t <- rbind(m,a)
+print(t)
+
+```
+###Variance Inflation factor
+
+```{r vif,message=FALSE, warning=FALSE,echo=FALSE}
+t <- c(continuous)
+library(car)
+fit3 <- lm(mpg ~ . ,data=n[,t]); fit4 <- lm(mpg ~ . ,data=nn[,t]); 
+c <- round(sqrt(vif(fit3)),3); cc <-round(sqrt(vif(fit4)),3);
+f <-rbind(c,cc);print(f)
+```
+
+drat and qsec vary drastically between the two normalization strategies.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=12,fig.height=8}
+#nn <- enumerate_cols(nn,enumerated)
+#ppp(nn, "Exploration by Transmission","am")
+
+```
+
+##Model Selection
+*fit multiple models to dtermine optimal model selection*
+
+``` {r echo=FALSE}
+fit1 <- lm(mpg ~ factor(am), data=nn); 
+fit2 <- lm(mpg ~ factor(am) + disp + wt + hp, data=nn);
+fit3 <- lm(mpg ~ factor(am) + disp + wt + hp + qsec, data=nn); 
+fit4 <- lm(mpg ~ factor(am) + disp + wt + hp + qsec + drat, data=nn); 
+anova(fit1,fit2,fit3,fit4)
+```
+
+With near zero p-value, model 2 seems to be the best choice of regressors, but the addition of qsec gives us two strong multivariable infleunces.  So model 3.
+
+##Interpret The Coefficients
+
+``` {r echo=FALSE}
+fit1 <- lm(mpg ~ disp + wt + hp + qsec + factor(am) -1, data=nn); 
+round(summary(fit1)$coeff,3)
+confint(fit1)
+```
+
+Wt seems to be the only factor of weight, if you'll pardon the pun.  But qsec is at least significant compared to the other factors.
+
+##Residuals
+*residual plot and some diagnostics*
+
+``` {r echo=FALSE}
+plot(fitted(fit1), resid(fit1))
+abline(h = 0)
+```
+
+No abnormalities are observed in the residual plot.
+
+##Conclusions
+
+As shown by the graphs (see Appendix C), automatics run heavier on average than manual transmission vehicles though they can be significantly faster at the quarter mile those few are outliers. The result is distinct separation in the confidence intervals for automatics and manual transmission with manuals the clear winner for mpg.  It is possible my decisions for normalizing and which variables should be ignored skewed the results.  Based on the results I produced,  great gas mileage is mostly a factor of weight with accleration a distant second although one could easiy explain how qsec could be inversely related to weight.
+
+##Appendix A Data Description
+
+> The data was extracted from the 1974 Motor Trend US magazine, and comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973-74 models).
+
+
+* [, 1]  mpg  Miles/(US) gallon
+* [, 2]  cyl	Number of cylinders
+* [, 3]	disp	Displacement (cu.in.)
+* [, 4]	hp	Gross horsepower
+* [, 5]	drat	Rear axle ratio
+* [, 6]	wt	Weight (lb/1000)
+* [, 7]	qsec	1/4 mile time
+* [, 8]	vs	V/S
+* [, 9]	am	Transmission (0 = automatic, 1 = manual)
+* [,10]	gear	Number of forward gears
+* [,11]	carb	Number of carburetors
+
+##Appendix B, Rational for dropping columns.
+
+*Good regressors have three main qualities.*
+
+1. They vary enough along the x axis (distribution).
+2. When they vary along the x axis, the outcome variable varies along the y axis in linear or curvilinear or some identifiable pattern.
+3. Using the linear pattern as an example, the points stay fairly close to that line.
+
+Cylinder count, gear count, carboretor count, and engine configuration are removed becuase they are poor regressors.  
+``````{r eval=FALSE,ref.label='definition'}
+```
+
+##Appendix C Exploring the data
+Here is are scatter plots with linear regression line for normalized data sets.  Automatic and Manual were normalized together where Automamitic subset and Manual subset were normalized separately and added into the first data set.  The difference in Manual and Automatics has little do with transmission and is more of a function of design as evidenced by the subset lines overlapping with little 
+variation in slope of the line.
+```{r eval=FALSE,ref.label='toolbox1A'}
+```
+```{r eval=FALSE,ref.label='exploredata'}
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=4,fig.height=3}
+
+#plot_graph(n_mtcars)
+
+#plot_graph(nn_am)
+nnn <- enumerate_cols(nnn,enumerated)
+levels(nnn$am) <-c("Automatic", "Manual","Automatic Subset","Manual Subset")  
+plot_graph(nnn[,c("mpg","am","wt","qsec","hp","disp")])
+
+```
+
+
+```{r echo=FALSE,eval=FALSE}
+data(mtcars) 
+#print(head(mtcars))
+y <- mtcars$am
+x <- mtcars$mpg
+lm <-lm(x~y)
+print(coef(lm))
+
+y <- n$am
+x <- n$mpg
+lm <-lm(x~y)
+print(coef(lm))
+
+y <- n0$wt
+x <- n0$mpg
+lm <-lm(x~y)
+print(coef(lm))
+y <- n1$wt
+x <- n1$mpg
+lm <-lm(x~y)
+print(coef(lm))
+
+```
