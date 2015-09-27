@@ -214,21 +214,16 @@ fit1 <- lm(mpg ~ disp + wt + hp + qsec + factor(am) -1, data=nn);
 round(summary(fit1)$coeff,3)
 confint(fit1)
 ```
-
-Wt seems to be the only factor of weight, if you'll pardon the pun.  But qsec is at least significant compared to the other factors.
+Wt seems to be the only factor of weight, if you'll pardon the pun.  But qsec is at least significant compared to the other factors.  Transmission type looks even more significant but I think that could be explained using appendix C, graphing.
 
 ##Residuals
-*residual plot and some diagnostics*
-
 ``` {r echo=FALSE}
-plot(fitted(fit1), resid(fit1))
-abline(h = 0)
+summary(fit1)$sigma ^ 2
+#summary(fit1)
 ```
-
-No abnormalities are observed in the residual plot.
+Residiual variance is roughly the span on the confidence interval for weight.
 
 ##Conclusions
-
 As shown by the graphs (see Appendix C), automatics run heavier on average than manual transmission vehicles though they can be significantly faster at the quarter mile those few are outliers. The result is distinct separation in the confidence intervals for automatics and manual transmission with manuals the clear winner for mpg.  It is possible my decisions for normalizing and which variables should be ignored skewed the results.  Based on the results I produced,  great gas mileage is mostly a factor of weight with accleration a distant second although one could easiy explain how qsec could be inversely related to weight.
 
 ##Appendix A Data Description
@@ -276,6 +271,17 @@ nnn <- enumerate_cols(nnn,enumerated)
 levels(nnn$am) <-c("Automatic", "Manual","Automatic Subset","Manual Subset")  
 plot_graph(nnn[,c("mpg","am","wt","qsec","hp","disp")])
 
+```
+
+##Appendix D Residual Analysis
+
+No abnormalities are observed in the residual plot.
+
+``` {r echo=FALSE}
+#plot(fitted(fit1), resid(fit1))
+#abline(h = 0)
+par(mfrow = c(2, 2))
+plot(fit1)
 ```
 
 
